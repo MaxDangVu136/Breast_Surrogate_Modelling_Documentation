@@ -431,7 +431,7 @@ $u_{n}$ is the neural network's predicted displacement, $\hat{u}_{n}$ is the dis
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=0.75]{Images/breast/surrogate_network.png}
+    \includegraphics[scale=0.75]{Images/breast/machine_learning/surrogate_network.png}
     \caption{\textit{\label{fig1}The surrogate model's neural network architecture consists of three dense hidden layers and a single output layer. The inputs are fed into dense layers containing 32 neurons each. These neurons are connected to all neurons in the successive layers to increase the network's capacity. The output (prediction) is compared to the known outputs from the dataset to determine model fit.}}
 \end{figure}
 
@@ -440,7 +440,7 @@ The configuration file (Figure \ref{fig2}) controls the inputs into the function
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=1.1]{Images/breast/breast_opencmiss_config.png}
+    \includegraphics[scale=1.1]{Images/breast/machine_learning/breast_opencmiss_config.png}
     \caption{\textit{\label{fig2}Layout of the config file containing four different objects: model inputs, model outputs, training hyperparameters and network structure.}}
 \end{figure}
 
@@ -501,7 +501,7 @@ The dataset should be in the format matching the labels with a full \textit{.csv
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.7]{Images/breast/training_data_structure.png}
+\includegraphics[scale=0.7]{Images/breast/machine_learning/training_data_structure.png}
 \caption{\textit{\label{fig3}An example case used in the dataset for training and validating surrogate models. Note that there are seven inputs ($C_{1}$, $g_{1}$, $g_{2}$, $g_{3}$, x, y, z) and three outputs (x', y', z') per sample.}}
 \end{figure}
 
@@ -509,7 +509,7 @@ The trained model takes a material stiffness parameter $C_{1}$, the gravity forc
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.7]{Images/breast/breast_visualisation.png}
+\includegraphics[scale=0.7]{Images/breast/machine_learning/breast_visualisation.png}
 \caption{\textit{\label{fig4}The synthetic dataset was generated using a simplified breast biomechanics model of the breast. The reference configuration mesh is visualised here}} 
 \end{figure}
 
@@ -642,7 +642,7 @@ where the directory of tf-event files are  \textit{/breast\_biomechanics\_traine
 
 \begin{figure}
 \centering
-\includegraphics[scale=1.1]{Images/breast/tensorboard.png}
+\includegraphics[scale=1.1]{Images/breast/surrogate_model/tensorboard.png}
 \caption{\textit{\label{fig7}Key metric outputs (Domain error, BD error, Validation loss) visualised on Tensorboard. Note that the validation loss is on the y-axis (in log-scale) and number of epochs is on the x-axis.}}
 \end{figure}
 
@@ -663,7 +663,6 @@ To perform the prediction and visualise its accuracy, run the following command:
 \PY{n}{CUDA\PYZus{}VISIBLE\PYZus{}DEVICES}\PY{o}{=}\PY{l+m+mi}{6} \PY{n}{PYTHONPATH}\PY{o}{=}\PY{o}{/}\PY{n}{hpc}\PY{o}{/}\PY{n}{mdan066}\PY{o}{/}\PY{n}{projects}\PY{o}{/}\PY{n}{mixed-reality-phantoms}\PY{o}{/}\PY{n}{surrogate_model}\PY{o}{/}\PY{n}{BioMeS}\PY{o}{/} \PY{n}{python} \PY{n}{plot\PYZus{}model\PYZus{}error}\PY{o}{.}\PY{n}{py} \PY{n}{..}\PY{o}{/}\PY{n}{resources}\PY{o}{/}\PY{n}{data\PYZus{}generation\PYZus{}breast}\PY{o}{.}\PY{n}{gen} \PY{n}{training\PYZus{}data\PYZus{}c1\PYZus{}3.0\PYZus{}g1\PYZus{}-9.81\PYZus{}g2\PYZus{}0.0\PYZus{}g3\PYZus{}0.0}\PY{o}{.}\PY{n}{csv} 
 \end{Verbatim}
 \end{tcolorbox}
-
 
 This script outputs five main metrics, as computed below in equations 2-6 below. 
 \textbf{Mean absolute global error: }
@@ -712,21 +711,77 @@ From the same script \textit{plot\_model\_error.py}, we can visualise the predic
 
 \begin{figure}
 \centering
-\includegraphics[scale=1.0]{Images/breast/3.0_prone_model.png}
+\includegraphics[scale=1.0]{Images/breast/surrogate_model/3.0_prone_model.png}
 \caption{\textit{\label{fig8}Model prediction for gravity force in prone orientation (C_1 = \SI{3.0}{kPa}).}}
 \end{figure}
 
 \begin{figure}
 \centering
-\includegraphics[scale=1.0]{Images/breast/3.0_supine_model.png}
+\includegraphics[scale=1.0]{Images/breast/surrogate_model/3.0_supine_model.png}
 \caption{\textit{\label{fig9}Model prediction for gravity force in supine orientation (C_1 = \SI{3.0}{kPa}).}}
 \end{figure}
 
 \pagebreak
 
-%   Part III
+%   Part III: Parameter estimation
 \section{Part III: Parameter estimation}
 
+Outline:
+\begin{itemize}
+    \item This section shows how to estimate the mechanical properties of soft tissues. 
+    \item Example here is a homogeneous breast model (only one material parameter, $C_1$). 
+    \item We find the constitutive material parameter ($C_1$) that best fits the predicted displacement data by breast surrogate model. 
+    \item Objective function: contour matching (minimise the mean distance between ground truth deformed surface and predicted deformed surface). 
+    \item Note that these surfaces are defined as 3D point clouds. 
+    \item Equation is $\theta = \underset{\hat{\theta}}{\arg\min}(d(s_{i} + u(\hat{\theta}), s_{f}))$, where $ d(s_1, s_2) = \frac{1}{|s_1|}\sum_{x \in s_{1}} \underset{y \in s_{2}}{\min} \lVert x-y \rVert $. We add the predicted displacements by surrogate model to the undeformed breast surface. 
+    \item Parameter estimation history plots (demonstrating convergence over epochs). 
+        \begin{figure}
+            \centering
+            \includegraphics[scale=0.8]{Images/breast/parameter_estimation/prone_parameter_estimate.png}
+            \caption{\textit{\label{fig10}Prone: Best $C_1$ estimate: 1.51 kPa, time: \_ seconds}}
+        \end{figure}
+
+        \begin{figure}
+            \centering
+            \includegraphics[scale=0.8]{Images/breast/parameter_estimation/supine_parameter_estimate.png}
+            \caption{\textit{\label{fig11}Supine: Best $C_1$ estimate: 1.515 kPa, time: \_ seconds}}
+        \end{figure}
+    
+    \item Objective function plot for example ($C_1$ = 1.50 kPa, $\theta$ = -90\textdegree, $\phi$ = 0\textdegree or 180\textdegree).
+        \begin{figure}
+            \centering
+            \includegraphics[scale=0.8]{Images/breast/parameter_estimation/Prone_loss.png}
+            \caption{\textit{\label{fig12}Prone: Best $C_1$ estimate: 1.51 kPa, Loss: 0.4272}}
+        \end{figure}
+        
+        \begin{figure}
+            \centering
+            \includegraphics[scale=0.8]{Images/breast/parameter_estimation/Supine_loss.png}
+            \caption{\textit{\label{fig13}Supine: Best $C_1$ estimate: 1.515 kPa, Loss: 0.4545}}
+        \end{figure}
+    \item Computation time.
+    \begin{itemize}
+        \item Consider GPU vs CPU.
+        \item Consider the point density per element. 
+    \end{itemize}
+    \item Show that this works for multiple parameter values. 
+    \item Future consideration: remove all boundaries, keep only breast surface (that's our region of interest). 
+    \item Ultimate aim: use framework to predict mechanical properties of a physical phantom (this example uses a computational model). 
+\end{itemize}
+
+Code/procedure: 
+\begin{itemize}
+    \item Script: \textit{run\_parameter\_estimation\_1E\_breast\_surfaces.py}.
+    \item Similar procedure to training models, except we run a different script. 
+\end{itemize}
+
+\begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{4}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{CUDA\PYZus{}VISIBLE\PYZus{}DEVICES}\PY{o}{=}\PY{l+m+mi}{6} \PY{n}{PYTHONPATH}\PY{o}{=}\PY{o}{/}\PY{n}{hpc}\PY{o}{/}\PY{n}{mdan066}\PY{o}{/}\PY{n}{projects}\PY{o}{/}\PY{n}{mixed-reality-phantoms}\PY{o}{/}\PY{n}{surrogate_model}\PY{o}{/}\PY{n}{BioMeS}\PY{o}{/} \PY{n}{python} \PY{n}{run\PYZus{}parameter\PYZus{}estimation\PYZus{}1E\PYZus{}breast\PYZus{}surfaces}\PY{o}{.}\PY{n}{py} \PY{n}{..}\PY{o}{/}\PY{n}{resources}\PY{o}{/}\PY{n}{data\PYZus{}generation\PYZus{}breast}\PY{o}{.}\PY{n}{gen} \PY{n}{training\PYZus{}data\PYZus{}c1\PYZus{}3.0\PYZus{}theta\PYZus{}-90.0\PYZus{}phi\PYZus{}0.0}\PY{o}{.}\PY{n}{csv} 
+\end{Verbatim}
+\end{tcolorbox}
+    
 \pagebreak
 
 \section{Part IV: Practical strategies/sanity checks for model training}
@@ -750,7 +805,7 @@ Sometimes the validation loss does not improve significantly over many epochs. T
     \item Increase the number of maximum epochs to a very high number. More epochs typically enables better training. An early stopping condition can be implemented to stop training once the model performance does not improve any further over a certain number of epochs (therefore saving unnecessary computational costs). 
     \item A large number of epochs may lead to overfitting of the model. However, we want to see when network overfits and stop training when this happens. The extracted results will be independent to the number of epochs, as we are only interested in the epoch with the lowest validation loss score. 
     \item Add more neurons to each layer or increase the number of layers in the network. More layers typically increases training time significantly.  
-    \item Perform sensitivity analysis of optimisation parameters (learning rate, batch size), and architecture parameters (number of hidden layers and neurons per layer). Use a grid search for this systematic evaluation.
+    \item Perform sensitivity analysis of optimisation parameters (learning rate, batch comparison architecture parameters (number of hidden layers and neurons per layer). Use a grid search for this systematic evaluation.
     \item Use the test loss as the metric for sensitivity analysis. Validation loss can be biased, as it estimates the generalised performance of the model in a way that is biased to fitting to the data. Test loss is an unbiased evaluation of the final model fit. (\textbf{Not too sure about this, check again.})\\   
 \end{itemize}
 
