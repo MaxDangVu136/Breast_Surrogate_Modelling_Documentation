@@ -418,14 +418,14 @@ Adapting learning rates during training can be implemented using the Learning Ra
 
 %   Surrogate mechanics modelling workflow
 \subsection{Surrogate mechanics modelling workflow}
-This machine learning workflow consists of three main components:
+This machine learning workflow consists of four main components:
 
 \begin{itemize}
 \tightlist
 \item A dataset \textit{(``breast\_training\_data``)}.
 \item A configuration file \textit{(``data\_generation\_breast.gen``)}.
-\item A training script \textit{(``run\_learn\_model.py``)}.
-\item A model prediction script \textit{(``plot\_model\_error.py``)}.
+\item A training script \textit{(``run\_learn\_model\_breast.py``)}.
+\item A model prediction script \textit{(``run\_execute\_predictions\_breast.py``)}.
 
 \end{itemize}
 
@@ -441,8 +441,8 @@ $u_{n}$ is the neural network's predicted displacement, $\hat{u}_{n}$ is the dis
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=0.75]{Images/breast/machine_learning/surrogate_network.png}
-    \caption{\textit{\label{fig1}The surrogate model's neural network architecture consists of three dense hidden layers and a single output layer. The inputs are fed into dense layers containing 32 neurons each. These neurons are connected to all neurons in the successive layers to increase the network's capacity. The output (prediction) is compared to the known outputs from the dataset to determine model fit.}}
+    \includegraphics[scale=0.75]{Images/breast/machine_learning/network_diagram.png}
+    \caption{\textit{\label{fig1}The surrogate model's neural network architecture consists of dense hidden layers and a single output layer. The inputs are fed into dense layers containing a certain number of neurons each. These neurons are connected to all neurons in the successive layers to increase the network's capacity. The output (prediction) is compared to the known outputs from the dataset to determine model fit.}}
 \end{figure}
 
 \subsubsection{The config file}
@@ -450,7 +450,7 @@ The configuration file (Figure \ref{fig2}) controls the inputs into the function
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=1.1]{Images/breast/machine_learning/breast_opencmiss_config.png}
+    \includegraphics[scale=1.1]{Images/breast/machine_learning/config_file.png}
     \caption{\textit{\label{fig2}Layout of the config file containing four different objects: model inputs, model outputs, training hyperparameters and network structure.}}
 \end{figure}
 
@@ -511,16 +511,16 @@ The dataset should be in the format matching the labels with a full \textit{.csv
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.7]{Images/breast/machine_learning/training_data_structure.png}
-\caption{\textit{\label{fig3}An example case used in the dataset for training and validating surrogate models. Note that there are seven inputs ($C_{1}$, $g_{1}$, $g_{2}$, $g_{3}$, x, y, z) and three outputs (x', y', z') per sample.}}
+\includegraphics[scale=0.7]{Images/breast/machine_learning/data_structure.png}
+\caption{\textit{\label{fig3}An example case used in the dataset for training and validating the surrogate ML models. Note that there are seven inputs ($C_{1}$, $g_{1}$, $g_{2}$, $g_{3}$, x', y', z') and three outputs (dx, dy, dz) per sample.}}
 \end{figure}
 
-The trained model takes a material stiffness parameter $C_{1}$, the gravity force vector $g$ = [$g_{1}$, $g_{2}$, $g_{3}$], and the reference geometry (x, y, z) to return the material point displacement (x', y', z'). The model receives a large dataset of related inputs and outputs (labels) and trains itself of the knowledge for the correct output based on each input combination. In this example, data was generated from an incompressible, homogeneous, and isotropic breast model under gravity loading using $C_{1}$ values between 0.8 kPa and 5.0 kPa in 0.1 kPa intervals (Figure \ref{fig4}).
+The trained model takes a material stiffness parameter $C_{1}$, the gravity force vector $g$ = [$g_{1}$, $g_{2}$, $g_{3}$], and the reference geometry (x', y', z') to return the material point displacement (dx, dy, dz). The model receives a large dataset of related inputs and outputs (labels) and trains itself of the knowledge for the correct output based on each input combination. In this example, data was generated from an incompressible, homogeneous, and isotropic breast model under gravity loading using $C_{1}$ values between 0.8 kPa and 5.0 kPa in 0.1 kPa intervals (Figure \ref{fig4}).
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.7]{Images/breast/machine_learning/breast_visualisation.png}
-\caption{\textit{\label{fig4}The synthetic dataset was generated using a simplified breast biomechanics model of the breast. The reference configuration mesh is visualised here}} 
+\includegraphics[scale=0.7]{Images/breast/machine_learning/geometry_diagram.png}
+\caption{\textit{\label{fig4}The synthetic dataset was generated using a simplified breast biomechanics model of the breast. The mesh geometry in the reference (undeformed) configuration is visualised here.}} 
 \end{figure}
 
 \subsubsection{Model prediction script}
@@ -623,7 +623,7 @@ Note that Figures 5 and 6 were generated for a different model and therefore not
 \subsubsection{Visualising model on Tensorboard}
 Once training is completed, we can visualise the validation loss using TensorBoard on a browser. This tracks and plots the metrics (loss and accuracy) involved in a machine learning workflow. One of TensorBoard's main benefits is that we don't need additional code within the scripts to save and write information. Instead, data can be saved in graph execution and not taken out of the GPU. This enables cross-platform applications, flexibility in use and larger model trainings. 
 
-Tensorboard was initialised in the \textit{run\_learn\_model.py} script to plot the training metrics of the surrogate model. 
+Tensorboard was initialised in the \textit{run\_learn\_model\_breast.py} script to plot the training metrics of the surrogate model. 
 \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{5}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -657,12 +657,12 @@ where the directory of tf-event files are  \textit{/breast\_biomechanics\_traine
 \end{figure}
 
 \subsection{Use trained surrogate model to predict material point displacements}
-We can check how well the surrogate model predicts the material point displacements of the breast using the script \textit{plot\_model\_error.py}. This loads in the most recently trained surrogate model (see path at \textit{cfg["training"]["path"]+"saved\_model"}) and takes in the following arguments.
+We can check how well the surrogate model predicts the material point displacements of the breast using the script \textit{run\_execute\_predictions\_new.py}. This loads in the most recently trained surrogate model (see path at \textit{cfg["training"]["path"]+"saved\_model"}) and takes in the following arguments.
 \begin{itemize}
-    \item sys.argv[2]: the case file of interest from the synthetic dataset (in this case, \textit{``training\_data\_c1\_3.0\_g1\_-9.81\_g2\_0.0\_g3\_0.0.csv``}).
+    \item sys.argv[2]: the case file of interest from the synthetic dataset (in this case, \textit{``training\_data\_c1\_3.0\_theta\_90.0\_elevation\_0.0.csv``}).
     \item cfg["outputs"]["path"] is the directory where synthetic dataset files are located. 
-    \item "g1" (x-component of gravity force) is the parameter you want to estimate. 
-    \item 9.81 is the parameter value you input into the model (in this case, this represents the x-component of the gravity force in the supine orientation).
+    \item "g2" (x-component of gravity force) is the parameter you want to estimate. 
+    \item 9.81 is the parameter value you input into the model (in this case, this represents the y-component of the gravity force in the supine orientation).
 \end{itemize}
 \newline
 
@@ -670,7 +670,7 @@ To perform the prediction and visualise its accuracy, run the following command:
 \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{4}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{CUDA\PYZus{}VISIBLE\PYZus{}DEVICES}\PY{o}{=}\PY{l+m+mi}{6} \PY{n}{PYTHONPATH}\PY{o}{=}\PY{o}{/}\PY{n}{hpc}\PY{o}{/}\PY{n}{mdan066}\PY{o}{/}\PY{n}{projects}\PY{o}{/}\PY{n}{mixed-reality-phantoms}\PY{o}{/}\PY{n}{surrogate_model}\PY{o}{/}\PY{n}{BioMeS}\PY{o}{/} \PY{n}{python} \PY{n}{plot\PYZus{}model\PYZus{}error}\PY{o}{.}\PY{n}{py} \PY{n}{..}\PY{o}{/}\PY{n}{resources}\PY{o}{/}\PY{n}{data\PYZus{}generation\PYZus{}breast}\PY{o}{.}\PY{n}{gen} \PY{n}{training\PYZus{}data\PYZus{}c1\PYZus{}3.0\PYZus{}g1\PYZus{}-9.81\PYZus{}g2\PYZus{}0.0\PYZus{}g3\PYZus{}0.0}\PY{o}{.}\PY{n}{csv} 
+\PY{n}{CUDA\PYZus{}VISIBLE\PYZus{}DEVICES}\PY{o}{=}\PY{l+m+mi}{6} \PY{n}{PYTHONPATH}\PY{o}{=}\PY{o}{/}\PY{n}{hpc}\PY{o}{/}\PY{n}{mdan066}\PY{o}{/}\PY{n}{projects}\PY{o}{/}\PY{n}{mixed-reality-phantoms}\PY{o}{/}\PY{n}{surrogate_model}\PY{o}{/}\PY{n}{BioMeS}\PY{o}{/} \PY{n}{python} \PY{n}{run\PYZus{}execute\PYZus{}predictions\PYZus{}breast}\PY{o}{.}\PY{n}{py} \PY{n}{..}\PY{o}{/}\PY{n}{resources}\PY{o}{/}\PY{n}{data\PYZus{}generation\PYZus{}breast}\PY{o}{.}\PY{n}{gen} \PY{n}{duke\PYZus{}training\PYZus{}data\PYZus{}c1\PYZus{}3.0\PYZus{}theta\PYZus{}90.0\PYZus{}phi\PYZus{}0.0\PYZus{}point\PYZus{}5}\PY{o}{.}\PY{n}{csv} 
 \end{Verbatim}
 \end{tcolorbox}
 
@@ -712,12 +712,12 @@ This script outputs five main metrics, as computed below in equations 2-6 below.
 
 For this example, we get the following output. \\
 \\
-\textbf{Mean absolute global error}: $0.247 \pm 0.244$ mm. \\
-\textbf{Mean displacement}: \SI{0.970}{mm}. \\
-\textbf{Displacement range}: $[0.001, 12.597]$ mm. 
+\textbf{Mean absolute global error}: $0.0287 \pm 0.0233$ mm. \\
+\textbf{Mean displacement}: \SI{1.735}{mm}. \\
+\textbf{Displacement range}: $[0.000143, 7.0175]$ mm. 
 
 \subsection{Visualise surrogate model predictions and errors}
-From the same script \textit{plot\_model\_error.py}, we can visualise the predicted displacement field and the errors associated with this prediction. The prediction for a 3.0 kPa breast model in the prone (Figure 8) and supine (Figure 9) orientations are shown below. 
+From the same script \textit{run\_execute\_predictions\_new.py}, we can visualise the predicted displacement field and the errors associated with this prediction. The prediction for a 3.0 kPa breast model in the prone (Figure 8) and supine (Figure 9) orientations are shown below. 
 
 \begin{figure}
 \centering
